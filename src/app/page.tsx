@@ -4,6 +4,8 @@ import dynamic from 'next/dynamic'
 import { Suspense, useEffect, useState } from 'react'
 import { ErrorBoundary } from 'react-error-boundary'
 import { CanvasContainer } from '@/components/dom/CanvasContainer'
+import { InfoPanel } from '@/components/dom/InfoPanel'
+import { useInteractionStore } from '@/store/interactionStore'
 
 // 动态导入Scene组件以避免SSR问题
 const Scene = dynamic(() => import('@/components/canvas/Scene').then(mod => ({ default: mod.Scene })), {
@@ -41,6 +43,7 @@ function ErrorFallback({ error, resetErrorBoundary }: {
 
 export default function Home() {
   const [isClient, setIsClient] = useState(false)
+  const { activeContent, hideContent } = useInteractionStore()
 
   useEffect(() => {
     setIsClient(true)
@@ -64,6 +67,17 @@ export default function Home() {
             <Scene />
           </CanvasContainer>
         </Suspense>
+        <InfoPanel
+          title={activeContent ? `关于 ${activeContent}` : ''}
+          content={
+            <div className="prose dark:prose-invert">
+              {/* 动态内容 */}
+              <p>这是一个示例内容面板。</p>
+            </div>
+          }
+          position="right"
+          onClose={hideContent}
+        />
       </div>
     </ErrorBoundary>
   )

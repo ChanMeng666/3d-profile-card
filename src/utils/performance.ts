@@ -1,89 +1,90 @@
 import * as THREE from 'three'
+import { isMobile } from '@/utils/device'
 
-// 材质缓存管理器
-class MaterialCache {
-  private static instance: MaterialCache
-  private cache: Map<string, THREE.Material>
-  private disposeQueue: Set<THREE.Material>
+// 事件优化管理器
+class EventOptimizer {
+  private static instance: EventOptimizer
+  private eventQueue: Map<string, Set<Function>>
+  private isProcessing: boolean
+  private rafId: number | null
 
   private constructor() {
-    this.cache = new Map()
-    this.disposeQueue = new Set()
+    this.eventQueue = new Map()
+    this.isProcessing = false
+    this.rafId = null
   }
 
   static getInstance() {
-    if (!MaterialCache.instance) {
-      MaterialCache.instance = new MaterialCache()
+    if (!EventOptimizer.instance) {
+      EventOptimizer.instance = new EventOptimizer()
     }
-    return MaterialCache.instance
+    return EventOptimizer.instance
   }
 
-  getMaterial(key: string): THREE.Material | undefined {
-    return this.cache.get(key)
-  }
-
-  addMaterial(key: string, material: THREE.Material) {
-    if (!this.cache.has(key)) {
-      this.cache.set(key, material)
+  // 添加事件处理器
+  addHandler(eventType: string, handler: Function) {
+    if (!this.eventQueue.has(eventType)) {
+      this.eventQueue.set(eventType, new Set())
     }
+    this.eventQueue.get(eventType)!.add(handler)
   }
 
-  disposeMaterial(key: string) {
-    const material = this.cache.get(key)
-    if (material) {
-      this.disposeQueue.add(material)
-      this.cache.delete(key)
+  // 移除事件处理器
+  removeHandler(eventType: string, handler: Function) {
+    const handlers = this.eventQueue.get(eventType)
+    if (handlers) {
+      handlers.delete(handler)
     }
   }
 
-  flushDisposeQueue() {
-    this.disposeQueue.forEach(material => {
-      material.dispose()
-    })
-    this.disposeQueue.clear()
-  }
-}
+  // 触发事件
+  trigger(eventType: string, event: any) {
+    const handlers = this.eventQueue.get(eventType)
+    if (!handlers) return
 
-// 几何体优化管理器
-class GeometryOptimizer {
-  static optimizeGeometry(geometry: THREE.BufferGeometry) {
-    // 合并顶点
-    geometry.mergeVertices()
-    // 计算法线
-    geometry.computeVertexNormals()
-    // 计算边界
-    geometry.computeBoundingSphere()
-    geometry.computeBoundingBox()
-    return geometry
+    if (!this.isProcessing) {
+      this.isProcessing = true
+      this.rafId = requestAnimationFrame(() => {
+        handlers.forEach(handler => handler(event))
+        this.isProcessing = false
+        this.rafId = null
+      })
+    }
   }
 
-  static createInstancedGeometry(
-    baseGeometry: THREE.BufferGeometry,
-    count: number
-  ): THREE.InstancedBufferGeometry {
-    const instancedGeometry = new THREE.InstancedBufferGeometry()
-    instancedGeometry.copy(baseGeometry)
-    
-    // 添加实例化属性
-    const instanceMatrix = new Float32Array(count * 16)
-    instancedGeometry.setAttribute(
-      'instanceMatrix',
-      new THREE.InstancedBufferAttribute(instanceMatrix, 16)
-    )
-    
-    return instancedGeometry
+  // 清理
+  dispose() {
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId)
+    }
+    this.eventQueue.clear()
   }
 }
 
 // 渲染优化管理器
 class RenderOptimizer {
   private static instance: RenderOptimizer
-  private renderer: THREE.WebGLRenderer | null = null
-  private lastFrameTime: number = 0
-  private frameCount: number = 0
-  private fpsLimit: number = 60
+  private renderer: THREE.WebGLRenderer | null
+  private scene: THREE.Scene | null
+  private camera: THREE.Camera | null
+  private renderQueue: Set<THREE.Object3D>
+  private isRendering: boolean
+  private rafId: number | null
+  private lastFrameTime: number
+  private frameCount: number
+  private targetFPS: number
 
-  private constructor() {}
+  private constructor() {
+    this.renderer = null
+    this.scene = null
+    this.camera = null
+    this.renderQueue = new Set()
+    this.isRendering = false
+    this.rafId = null
+    this.lastFrameTime = 0
+    this.frameCount = 0
+    this.targetFPS = isMobile() ? 30 : 60
+  }
 
   static getInstance() {
     if (!RenderOptimizer.instance) {
@@ -92,126 +93,145 @@ class RenderOptimizer {
     return RenderOptimizer.instance
   }
 
-  setRenderer(renderer: THREE.WebGLRenderer) {
+  // 初始化
+  init(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
     this.renderer = renderer
+    this.scene = scene
+    this.camera = camera
     this.setupOptimizations()
   }
 
+  // 设置优化
   private setupOptimizations() {
     if (!this.renderer) return
 
-    // 设置像素比
-    const pixelRatio = Math.min(window.devicePixelRatio, 2)
-    this.renderer.setPixelRatio(pixelRatio)
-
-    // 启用阴影优化
+    // 基础优化
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     this.renderer.shadowMap.autoUpdate = false
     this.renderer.shadowMap.needsUpdate = true
-
-    // 启用场景优化
     this.renderer.sortObjects = false
-  }
 
-  shouldRenderFrame(): boolean {
-    const now = performance.now()
-    const elapsed = now - this.lastFrameTime
-
-    if (elapsed >= (1000 / this.fpsLimit)) {
-      this.lastFrameTime = now
-      this.frameCount++
-      return true
-    }
-    return false
-  }
-
-  getFrameStats() {
-    return {
-      frameCount: this.frameCount,
-      fps: Math.round(this.frameCount / (performance.now() - this.lastFrameTime) * 1000),
-    }
-  }
-}
-
-// 内存管理器
-class MemoryManager {
-  private static instance: MemoryManager
-  private disposables: Set<{ dispose: () => void }>
-  private textureLoader: THREE.TextureLoader
-  private loadingTextures: Map<string, Promise<THREE.Texture>>
-
-  private constructor() {
-    this.disposables = new Set()
-    this.textureLoader = new THREE.TextureLoader()
-    this.loadingTextures = new Map()
-  }
-
-  static getInstance() {
-    if (!MemoryManager.instance) {
-      MemoryManager.instance = new MemoryManager()
-    }
-    return MemoryManager.instance
-  }
-
-  track(disposable: { dispose: () => void }) {
-    this.disposables.add(disposable)
-  }
-
-  untrack(disposable: { dispose: () => void }) {
-    this.disposables.delete(disposable)
-  }
-
-  disposeAll() {
-    this.disposables.forEach(disposable => {
-      disposable.dispose()
-    })
-    this.disposables.clear()
-  }
-
-  async loadTexture(url: string): Promise<THREE.Texture> {
-    if (this.loadingTextures.has(url)) {
-      return this.loadingTextures.get(url)!
-    }
-
-    const texturePromise = new Promise<THREE.Texture>((resolve, reject) => {
-      this.textureLoader.load(
-        url,
-        texture => {
-          this.track(texture)
-          resolve(texture)
-        },
-        undefined,
-        reject
+    // 移动端优化
+    if (isMobile()) {
+      this.renderer.setSize(
+        window.innerWidth * 0.8,
+        window.innerHeight * 0.8,
+        false
       )
-    })
+      this.renderer.shadowMap.enabled = false
+    }
+  }
 
-    this.loadingTextures.set(url, texturePromise)
-    return texturePromise
+  // 添加到渲染队列
+  addToRenderQueue(object: THREE.Object3D) {
+    this.renderQueue.add(object)
+    if (!this.isRendering) {
+      this.startRenderLoop()
+    }
+  }
+
+  // 从渲染队列移除
+  removeFromRenderQueue(object: THREE.Object3D) {
+    this.renderQueue.delete(object)
+    if (this.renderQueue.size === 0) {
+      this.stopRenderLoop()
+    }
+  }
+
+  // 开始渲染循环
+  private startRenderLoop() {
+    if (!this.renderer || !this.scene || !this.camera) return
+
+    this.isRendering = true
+    const animate = () => {
+      const now = performance.now()
+      const elapsed = now - this.lastFrameTime
+
+      if (elapsed >= (1000 / this.targetFPS)) {
+        this.frameCount++
+        this.lastFrameTime = now
+
+        this.renderQueue.forEach(object => {
+          if (object.visible) {
+            object.updateMatrixWorld()
+          }
+        })
+
+        this.renderer!.render(this.scene!, this.camera!)
+      }
+
+      this.rafId = requestAnimationFrame(animate)
+    }
+
+    this.rafId = requestAnimationFrame(animate)
+  }
+
+  // 停止渲染循环
+  private stopRenderLoop() {
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId)
+      this.rafId = null
+    }
+    this.isRendering = false
+  }
+
+  // 获取性能统计
+  getStats() {
+    return {
+      fps: Math.round(this.frameCount / ((performance.now() - this.lastFrameTime) / 1000)),
+      objectCount: this.renderQueue.size,
+      isRendering: this.isRendering,
+    }
+  }
+
+  // 清理
+  dispose() {
+    this.stopRenderLoop()
+    this.renderQueue.clear()
   }
 }
 
 // 性能监控器
-export class PerformanceMonitor {
+class PerformanceMonitor {
   private static instance: PerformanceMonitor
   private metrics: {
-    fps: number
+    fps: number[]
     memory: {
-      geometries: number
-      textures: number
+      geometries: number[]
+      textures: number[]
     }
-    drawCalls: number
-    triangles: number
+    render: {
+      calls: number[]
+      triangles: number[]
+    }
+    events: {
+      count: number[]
+      latency: number[]
+    }
   }
+  private maxSamples: number
+  private sampleInterval: number
+  private intervalId: NodeJS.Timeout | null
 
   private constructor() {
     this.metrics = {
-      fps: 0,
+      fps: [],
       memory: {
-        geometries: 0,
-        textures: 0,
+        geometries: [],
+        textures: [],
       },
-      drawCalls: 0,
-      triangles: 0,
+      render: {
+        calls: [],
+        triangles: [],
+      },
+      events: {
+        count: [],
+        latency: [],
+      },
     }
+    this.maxSamples = 60
+    this.sampleInterval = 1000
+    this.intervalId = null
   }
 
   static getInstance() {
@@ -221,29 +241,96 @@ export class PerformanceMonitor {
     return PerformanceMonitor.instance
   }
 
-  update(renderer: THREE.WebGLRenderer, scene: THREE.Scene) {
-    const info = renderer.info
-    this.metrics = {
-      fps: RenderOptimizer.getInstance().getFrameStats().fps,
-      memory: {
-        geometries: info.memory.geometries,
-        textures: info.memory.textures,
-      },
-      drawCalls: info.render.calls,
-      triangles: info.render.triangles,
+  // 开始监控
+  startMonitoring() {
+    if (this.intervalId) return
+
+    this.intervalId = setInterval(() => {
+      this.collectMetrics()
+    }, this.sampleInterval)
+  }
+
+  // 停止监控
+  stopMonitoring() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId)
+      this.intervalId = null
     }
   }
 
-  getMetrics() {
-    return this.metrics
+  // 收集指标
+  private collectMetrics() {
+    const renderStats = RenderOptimizer.getInstance().getStats()
+    const renderer = RenderOptimizer.getInstance().renderer
+
+    if (!renderer) return
+
+    // 更新FPS
+    this.updateMetric('fps', renderStats.fps)
+
+    // 更新内存指标
+    this.updateMetric('memory.geometries', renderer.info.memory.geometries)
+    this.updateMetric('memory.textures', renderer.info.memory.textures)
+
+    // 更新渲染指标
+    this.updateMetric('render.calls', renderer.info.render.calls)
+    this.updateMetric('render.triangles', renderer.info.render.triangles)
+
+    // 更新事件指标
+    const eventQueue = EventOptimizer.getInstance().eventQueue
+    this.updateMetric('events.count', Array.from(eventQueue.values()).reduce((acc, set) => acc + set.size, 0))
+  }
+
+  // 更新指标
+  private updateMetric(path: string, value: number) {
+    const parts = path.split('.')
+    let current: any = this.metrics
+    
+    for (let i = 0; i < parts.length - 1; i++) {
+      current = current[parts[i]]
+    }
+    
+    const array = current[parts[parts.length - 1]]
+    array.push(value)
+    
+    if (array.length > this.maxSamples) {
+      array.shift()
+    }
+  }
+
+  // 生成报告
+  generateReport() {
+    return {
+      fps: {
+        average: this.calculateAverage(this.metrics.fps),
+        min: Math.min(...this.metrics.fps),
+        max: Math.max(...this.metrics.fps),
+      },
+      memory: {
+        geometries: this.calculateAverage(this.metrics.memory.geometries),
+        textures: this.calculateAverage(this.metrics.memory.textures),
+      },
+      render: {
+        calls: this.calculateAverage(this.metrics.render.calls),
+        triangles: this.calculateAverage(this.metrics.render.triangles),
+      },
+      events: {
+        count: this.calculateAverage(this.metrics.events.count),
+        latency: this.calculateAverage(this.metrics.events.latency),
+      },
+    }
+  }
+
+  private calculateAverage(array: number[]) {
+    return array.length > 0
+      ? array.reduce((a, b) => a + b, 0) / array.length
+      : 0
   }
 }
 
 // 导出优化工具
-export const optimizationTools = {
-  MaterialCache: MaterialCache.getInstance(),
-  GeometryOptimizer,
-  RenderOptimizer: RenderOptimizer.getInstance(),
-  MemoryManager: MemoryManager.getInstance(),
-  PerformanceMonitor: PerformanceMonitor.getInstance(),
+export const performanceTools = {
+  event: EventOptimizer.getInstance(),
+  render: RenderOptimizer.getInstance(),
+  monitor: PerformanceMonitor.getInstance(),
 } 

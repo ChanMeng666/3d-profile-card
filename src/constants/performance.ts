@@ -1,39 +1,38 @@
 export const PERFORMANCE_CONFIG = {
   // 渲染配置
   render: {
-    maxFps: 60,
-    pixelRatio: Math.min(window.devicePixelRatio, 2),
+    targetFPS: {
+      mobile: 30,
+      desktop: 60,
+    },
+    pixelRatio: {
+      min: 1,
+      max: 2,
+    },
     batchSize: 1000,
-    frustumCulling: true,
+    culling: true,
   },
   
-  // 几何体优化
-  geometry: {
-    mergeVertices: true,
-    computeNormals: true,
-    computeBoundingSphere: true,
-    instanceThreshold: 10,
-  },
-  
-  // 材质优化
-  material: {
-    enableCache: true,
-    disposeUnused: true,
-    maxCacheSize: 100,
-  },
-  
-  // 内存管理
-  memory: {
-    textureDisposal: true,
-    geometryDisposal: true,
-    materialDisposal: true,
-    autoDispose: true,
+  // 事件配置
+  event: {
+    throttleDelay: 16,
+    maxQueueSize: 100,
+    batchProcessing: true,
   },
   
   // 监控配置
-  monitoring: {
-    enabled: true,
+  monitor: {
     sampleInterval: 1000,
-    logToConsole: process.env.NODE_ENV === 'development',
+    maxSamples: 60,
+    autoStart: true,
+    logLevel: 'warn',
+  },
+  
+  // 移动端优化
+  mobile: {
+    reducedQuality: true,
+    disableShadows: true,
+    simplifyGeometry: true,
+    maxTextureSize: 1024,
   },
 } as const 

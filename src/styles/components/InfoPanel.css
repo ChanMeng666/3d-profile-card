@@ -1,0 +1,56 @@
+@layer components {
+  .info-panel {
+    @apply fixed top-0 h-full w-full max-w-md bg-card-background text-text-primary;
+    @apply shadow-lg backdrop-blur-md overflow-y-auto;
+    @apply transition-transform duration-300 ease-in-out;
+  }
+
+  .info-panel-header {
+    @apply sticky top-0 z-10 flex items-center justify-between p-4;
+    @apply bg-card-background/80 backdrop-blur;
+  }
+
+  .info-panel-title {
+    @apply text-xl font-semibold truncate;
+  }
+
+  .info-panel-close {
+    @apply p-2 rounded-full transition-colors;
+    @apply hover:bg-gray-100 dark:hover:bg-gray-800;
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500;
+  }
+
+  .info-panel-content {
+    @apply p-4 space-y-4;
+  }
+
+  /* 响应式调整 */
+  @screen sm {
+    .info-panel {
+      @apply max-w-sm;
+    }
+  }
+
+  @screen md {
+    .info-panel {
+      @apply max-w-md;
+    }
+  }
+
+  /* 动画类 */
+  .info-panel-enter {
+    @apply transform translate-x-full;
+  }
+
+  .info-panel-enter-active {
+    @apply transform translate-x-0;
+  }
+
+  .info-panel-exit {
+    @apply transform translate-x-0;
+  }
+
+  .info-panel-exit-active {
+    @apply transform translate-x-full;
+  }
+} 
