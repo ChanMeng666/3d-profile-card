@@ -9,10 +9,13 @@ import {
   AdaptiveEvents,
   Preload
 } from '@react-three/drei'
+import * as THREE from 'three'
 import { ProfileCard } from './ProfileCard'
 import { Suspense } from 'react'
 import { CANVAS_CONFIG } from '@/constants'
 import { SceneContainer } from './SceneContainer'
+import { Cube } from './Cube'
+import { Lights } from './Lights'
 
 // 加载状态组件
 function Loader() {
@@ -27,10 +30,21 @@ export function Scene() {
   return (
     <div className="w-full h-full">
       <Canvas
+        shadows
         gl={{
           antialias: true,
           alpha: true,
           powerPreference: 'high-performance',
+          // 配置阴影贴图
+          shadowMap: {
+            enabled: true,
+            type: THREE.PCFSoftShadowMap,
+            autoUpdate: true,
+            needsUpdate: false,
+            // 添加缺失的属性
+            render: () => {},
+            cullFace: THREE.CullFaceBack
+          },
         }}
         dpr={[1, 2]} // 自适应设备像素比
         camera={{
@@ -55,12 +69,10 @@ export function Scene() {
           {/* 场景容器 */}
           <SceneContainer>
             {/* 光照设置 */}
-            <ambientLight intensity={0.5} />
-            <directionalLight
-              position={[10, 10, 5]}
-              intensity={1}
-              castShadow
-              shadow-mapSize={[1024, 1024]}
+            <Lights
+              shadowQuality="medium"
+              enableAnimation
+              debug={process.env.NODE_ENV === 'development'}
             />
             
             {/* 相机控制器 */}
@@ -75,6 +87,16 @@ export function Scene() {
             
             {/* 3D内容 */}
             <ProfileCard />
+            
+            {/* 添加立方体 */}
+            <Cube
+              position={[0, 0, 0]}
+              color="#4f46e5"
+              autoRotate
+              onClick={(event) => {
+                console.log('Cube clicked', event)
+              }}
+            />
           </SceneContainer>
         </Suspense>
       </Canvas>

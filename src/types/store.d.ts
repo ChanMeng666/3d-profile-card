@@ -23,6 +23,44 @@ export interface SceneStore {
   setError: (error: Error | null) => void
 }
 
+export interface CubeState {
+  // 旋转状态
+  rotation: {
+    isEnabled: boolean
+    speed: number
+    direction: [number, number, number]
+    currentRotation: [number, number, number]
+  }
+  // 材质状态
+  material: {
+    color: string
+    metalness: number
+    roughness: number
+    wireframe: boolean
+    opacity: number
+  }
+  // 动画状态
+  animation: {
+    isPlaying: boolean
+    currentFrame: number
+    duration: number
+    easing: 'linear' | 'easeIn' | 'easeOut' | 'easeInOut'
+  }
+  // 交互状态
+  interaction: {
+    isHovered: boolean
+    isSelected: boolean
+    lastInteraction: Date | null
+    clickCount: number
+  }
+  // 状态操作方法
+  setRotation: (rotation: Partial<CubeState['rotation']>) => void
+  setMaterial: (material: Partial<CubeState['material']>) => void
+  setAnimation: (animation: Partial<CubeState['animation']>) => void
+  setInteraction: (interaction: Partial<CubeState['interaction']>) => void
+  reset: () => void
+}
+
 export type ProfileSlice = StateCreator<
   ProfileState,
   [],

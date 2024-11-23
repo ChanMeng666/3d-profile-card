@@ -32,4 +32,20 @@ export interface ControlsProps {
   enableRotate?: boolean
   maxDistance?: number
   minDistance?: number
+}
+
+export interface CubeProps {
+  position?: [number, number, number]
+  rotation?: [number, number, number]
+  scale?: [number, number, number]
+  color?: string
+  wireframe?: boolean
+  metalness?: number
+  roughness?: number
+  autoRotate?: boolean
+  rotationSpeed?: number
+  castShadow?: boolean
+  receiveShadow?: boolean
+  onClick?: (event: THREE.Event) => void
+  onHover?: (event: THREE.Event) => void
 } 

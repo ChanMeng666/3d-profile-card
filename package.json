@@ -6,7 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:perf": "jest --testMatch='<rootDir>/src/tests/performance/**/*.test.ts'",
+    "type-check": "tsc --noEmit",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "analyze": "ANALYZE=true next build",
+    "prepare": "husky install"
   },
   "dependencies": {
     "@react-spring/three": "^9.7.3",
@@ -21,19 +29,36 @@
     "zustand": "^4.5.0"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^14.2.18",
+    "@testing-library/jest-dom": "^6.1.5",
+    "@testing-library/react": "^14.1.2",
+    "@types/jest": "^29.5.11",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/three": "^0.161.1",
+    "autoprefixer": "^10.4.20",
     "eslint": "^8",
-    "eslint-config-next": "15.0.3",
-    "postcss": "^8",
-    "r3f-perf": "^7.1.2",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5.3.3",
-    "@testing-library/react": "^14.0.0",
-    "@testing-library/react-hooks": "^8.0.1",
+    "eslint-config-next": "14.0.4",
+    "eslint-config-prettier": "^9.1.0",
+    "file-loader": "^6.2.0",
+    "glslify-loader": "^2.0.0",
+    "husky": "^8.0.3",
     "jest": "^29.7.0",
-    "@types/jest": "^29.5.12"
+    "jest-canvas-mock": "^2.5.2",
+    "jest-environment-jsdom": "^29.7.0",
+    "lint-staged": "^15.2.10",
+    "postcss": "^8",
+    "prettier": "^3.3.3",
+    "r3f-perf": "^7.1.2",
+    "raw-loader": "^4.0.2",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3"
+  },
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   }
 }
