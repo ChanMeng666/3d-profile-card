@@ -4,18 +4,49 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #f8fafc;
+  --card-background: #ffffff;
+  --card-border: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --border: #e2e8f0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+[data-theme='dark'] {
+  --background: #0f172a;
+  --foreground: #1e293b;
+  --card-background: #1e293b;
+  --card-border: #334155;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --border: #334155;
+}
+
+@layer base {
+  * {
+    @apply border-[--border];
+  }
+  body {
+    @apply bg-background text-text-primary;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+/* Canvas 容器样式 */
+.canvas-container {
+  @apply relative w-full h-[calc(100vh-4rem)] overflow-hidden;
+  touch-action: none;
+}
+
+/* 响应式调整 */
+@media (max-width: 640px) {
+  .canvas-container {
+    @apply h-[calc(100vh-2rem)];
+  }
+}
+
+/* 加载动画 */
+.loading-spinner {
+  @apply w-8 h-8 border-4 border-blue-500 rounded-full animate-spin;
+  border-top-color: transparent;
 }
