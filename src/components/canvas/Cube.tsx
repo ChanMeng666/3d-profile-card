@@ -1,121 +1,70 @@
 'use client'
 
-import React, { useRef, useState, useCallback } from 'react'
-import { useFrame, useLoader } from '@react-three/fiber'
-import { useSpring, animated } from '@react-spring/three'
+import { useRef, useEffect } from 'react'
+import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { useCubeStore, cubeActions } from '@/store/cubeStore'
-import { useMouseInteraction } from '@/hooks/useMouseInteraction'
-import { useAudio } from '@/hooks/useAudio'
-
-interface CubeProps {
-  position?: [number, number, number]
-  scale?: [number, number, number]
-  color?: string
-  hoverColor?: string
-  hoverScale?: number
-  enableSound?: boolean
-}
+import { useCubeStore, cubeActions, selectRotation, selectMaterial } from '@/store/cubeStore'
+import type { CubeProps } from '@/types'
 
 export function Cube({
   position = [0, 0, 0],
   scale = [1, 1, 1],
-  color = '#4f46e5',
-  hoverColor = '#6366f1',
-  hoverScale = 1.1,
-  enableSound = true,
+  ...props
 }: CubeProps) {
-  // 引用和状态
   const meshRef = useRef<THREE.Mesh>(null)
-  const materialRef = useRef<THREE.MeshStandardMaterial>(null)
-  const [hovered, setHovered] = useState(false)
-
-  // 加载法线贴图
-  const normalMap = useLoader(THREE.TextureLoader, '/textures/normal.jpg')
-
-  // 音效
-  const { play: playHoverSound } = useAudio('/sounds/hover.mp3', { volume: 0.5 })
-  const { play: playClickSound } = useAudio('/sounds/click.mp3', { volume: 0.5 })
-
-  // 动画配置
-  const { scale: springScale, color: springColor } = useSpring({
-    scale: hovered ? [scale[0] * hoverScale, scale[1] * hoverScale, scale[2] * hoverScale] : scale,
-    color: hovered ? hoverColor : color,
-    config: {
-      mass: 1,
-      tension: 280,
-      friction: 60,
-    },
-  })
-
-  // 鼠标交互
-  const { meshRef: interactionRef } = useMouseInteraction(
-    {
-      enableHover: true,
-      enableDrag: false,
-      enableDoubleClick: false,
-      touchEnabled: true,
-    },
-    {
-      onHover: useCallback((event: THREE.Event) => {
-        setHovered(true)
-        if (enableSound) playHoverSound()
-        cubeActions.handleInteraction(true, false)
-      }, [enableSound, playHoverSound]),
-      
-      onClick: useCallback((event: THREE.Event) => {
-        if (enableSound) playClickSound()
-        cubeActions.handleInteraction(false, true)
-      }, [enableSound, playClickSound]),
-    }
-  )
-
-  // 性能优化：限制更新频率
+  
+  // 使用状态选择器
+  const rotation = useCubeStore(selectRotation)
+  const material = useCubeStore(selectMaterial)
+  
+  // 动画更新
   useFrame((_, delta) => {
-    if (!meshRef.current || !materialRef.current) return
-
-    // 使用 RAF 进行平滑过渡
-    if (materialRef.current.emissiveIntensity !== (hovered ? 0.5 : 0)) {
-      materialRef.current.emissiveIntensity = THREE.MathUtils.lerp(
-        materialRef.current.emissiveIntensity,
-        hovered ? 0.5 : 0,
-        delta * 5
-      )
-    }
+    if (!meshRef.current || !rotation.isEnabled) return
+    
+    meshRef.current.rotation.x += rotation.speed * rotation.direction[0] * delta
+    meshRef.current.rotation.y += rotation.speed * rotation.direction[1] * delta
+    meshRef.current.rotation.z += rotation.speed * rotation.direction[2] * delta
   })
+
+  // 事件处理
+  const handlePointerOver = () => {
+    cubeActions.handleInteraction(true, false)
+  }
+
+  const handlePointerOut = () => {
+    cubeActions.handleInteraction(false, false)
+  }
+
+  const handleClick = () => {
+    cubeActions.handleInteraction(false, true)
+  }
+
+  // 清理
+  useEffect(() => {
+    return () => {
+      useCubeStore.getState().reset()
+    }
+  }, [])
 
   return (
-    <animated.mesh
-      ref={(mesh) => {
-        if (mesh) {
-          meshRef.current = mesh
-          if (interactionRef) {
-            // @ts-ignore - 类型兼容性问题
-            interactionRef.current = mesh
-          }
-        }
-      }}
+    <mesh
+      ref={meshRef}
       position={position}
-      scale={springScale}
-      onPointerOut={() => {
-        setHovered(false)
-        cubeActions.handleInteraction(false, false)
-      }}
+      scale={scale}
+      onPointerOver={handlePointerOver}
+      onPointerOut={handlePointerOut}
+      onClick={handleClick}
+      {...props}
     >
-      <boxGeometry args={[1, 1, 1]} />
-      <animated.meshStandardMaterial
-        ref={materialRef}
-        color={springColor}
-        metalness={0.5}
-        roughness={0.2}
-        emissive={hoverColor}
-        emissiveIntensity={0}
-        toneMapped={false}
-        normalMap={normalMap}
+      <boxGeometry args={[3, 3, 3]} />
+      <meshStandardMaterial
+        color={material.color}
+        metalness={material.metalness}
+        roughness={material.roughness}
+        wireframe={material.wireframe}
+        transparent
+        opacity={material.opacity}
       />
-    </animated.mesh>
+    </mesh>
   )
-}
-
-// 性能优化：记忆化组件
-export const MemoizedCube = React.memo(Cube) 
+} 

@@ -29,12 +29,6 @@ const initialState = {
     lastInteraction: null,
     clickCount: 0,
   },
-  hover: {
-    isHovered: false,
-    hoverStartTime: null as number | null,
-    hoverDuration: 0,
-    hoverCount: 0,
-  },
 }
 
 export const useCubeStore = create<CubeState>()(
@@ -71,25 +65,6 @@ export const useCubeStore = create<CubeState>()(
               clickCount: interaction.isSelected 
                 ? currentState.interaction.clickCount + 1 
                 : currentState.interaction.clickCount,
-            },
-          }))
-        },
-
-        setHover: (isHovered: boolean) => {
-          const now = Date.now()
-          const currentState = get()
-          
-          set(state => ({
-            hover: {
-              ...state.hover,
-              isHovered,
-              hoverStartTime: isHovered ? now : null,
-              hoverDuration: !isHovered && state.hover.hoverStartTime 
-                ? now - state.hover.hoverStartTime 
-                : state.hover.hoverDuration,
-              hoverCount: isHovered 
-                ? state.hover.hoverCount + 1 
-                : state.hover.hoverCount,
             },
           }))
         },
