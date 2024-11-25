@@ -29,8 +29,8 @@ export const getOptimalDPR = () => {
 
 // 创建光源
 export const createLights = () => {
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.3)
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.7)
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 1)
   directionalLight.position.set(10, 10, 5)
   directionalLight.castShadow = true
   directionalLight.shadow.mapSize.width = CANVAS_CONFIG.SHADOW_MAP_SIZE

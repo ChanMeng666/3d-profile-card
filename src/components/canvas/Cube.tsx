@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useRef, useState, useCallback } from 'react'
-import { useLoader } from '@react-three/fiber'
+import { useFrame, useLoader } from '@react-three/fiber'
 import { useSpring, animated } from '@react-spring/three'
 import * as THREE from 'three'
 import { useCubeStore, cubeActions } from '@/store/cubeStore'
@@ -11,14 +11,21 @@ import { useAudio } from '@/hooks/useAudio'
 interface CubeProps {
   position?: [number, number, number]
   scale?: [number, number, number]
+  color?: string
+  hoverColor?: string
+  hoverScale?: number
   enableSound?: boolean
 }
 
 export function Cube({
   position = [0, 0, 0],
   scale = [1, 1, 1],
+  color = '#4f46e5',
+  hoverColor = '#6366f1',
+  hoverScale = 1.1,
   enableSound = true,
 }: CubeProps) {
+  // 引用和状态
   const meshRef = useRef<THREE.Mesh>(null)
   const materialRef = useRef<THREE.MeshStandardMaterial>(null)
   const [hovered, setHovered] = useState(false)
@@ -30,9 +37,10 @@ export function Cube({
   const { play: playHoverSound } = useAudio('/sounds/hover.mp3', { volume: 0.5 })
   const { play: playClickSound } = useAudio('/sounds/click.mp3', { volume: 0.5 })
 
-  // 动画配置 - 只处理缩放，移除颜色动画
-  const { scale: springScale } = useSpring({
-    scale: hovered ? scale.map(s => s * 1.1) : scale,
+  // 动画配置
+  const { scale: springScale, color: springColor } = useSpring({
+    scale: hovered ? [scale[0] * hoverScale, scale[1] * hoverScale, scale[2] * hoverScale] : scale,
+    color: hovered ? hoverColor : color,
     config: {
       mass: 1,
       tension: 280,
@@ -62,6 +70,20 @@ export function Cube({
     }
   )
 
+  // 性能优化：限制更新频率
+  useFrame((_, delta) => {
+    if (!meshRef.current || !materialRef.current) return
+
+    // 使用 RAF 进行平滑过渡
+    if (materialRef.current.emissiveIntensity !== (hovered ? 0.5 : 0)) {
+      materialRef.current.emissiveIntensity = THREE.MathUtils.lerp(
+        materialRef.current.emissiveIntensity,
+        hovered ? 0.5 : 0,
+        delta * 5
+      )
+    }
+  })
+
   return (
     <animated.mesh
       ref={(mesh) => {
@@ -74,23 +96,22 @@ export function Cube({
         }
       }}
       position={position}
-      scale={springScale as any}
+      scale={springScale}
       onPointerOut={() => {
         setHovered(false)
         cubeActions.handleInteraction(false, false)
       }}
     >
       <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial
+      <animated.meshStandardMaterial
         ref={materialRef}
-        transparent
-        opacity={0.9}
-        color="#ffffff"  // 使用白色作为基础色
-        metalness={0.1}  // 降低金属度
-        roughness={0.8}  // 增加粗糙度
+        color={springColor}
+        metalness={0.5}
+        roughness={0.2}
+        emissive={hoverColor}
+        emissiveIntensity={0}
+        toneMapped={false}
         normalMap={normalMap}
-        normalScale={new THREE.Vector2(1.0, 1.0)}  // 增强法线贴图效果
-        envMapIntensity={0.2}  // 降低环境反射
       />
     </animated.mesh>
   )

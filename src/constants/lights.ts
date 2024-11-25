@@ -2,11 +2,11 @@ import { Vector3 } from 'three'
 
 export const LIGHT_CONFIG = {
   ambient: {
-    intensity: 0.3,
+    intensity: 0.5,
     color: '#ffffff',
   },
   directional: {
-    intensity: 0.7,
+    intensity: 1,
     color: '#ffffff',
     position: new Vector3(10, 10, 5),
     shadowMapSize: 2048,
@@ -14,7 +14,7 @@ export const LIGHT_CONFIG = {
     shadowRadius: 4,
   },
   point: {
-    intensity: 0.4,
+    intensity: 0.8,
     color: '#ffffff',
     distance: 20,
     decay: 2,
